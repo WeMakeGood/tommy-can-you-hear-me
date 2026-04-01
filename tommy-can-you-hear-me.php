@@ -3,7 +3,7 @@
  * Plugin Name:       Tommy Can You Hear Me
  * Plugin URI:        https://marshall.usc.edu
  * Description:       Tommy, can you hear me? Can you feel me near you? (Yes — because this plugin fixes Divi accessibility issues so everyone can. WCAG 1.4.1, 1.4.4, 4.1.2.)
- * Version:           1.2.0
+ * Version:           1.2.1
  * Author:            USC Marshall
  * License:           GPL-2.0-or-later
  * Text Domain:       tommy-can-you-hear-me

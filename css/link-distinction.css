@@ -12,21 +12,27 @@
  * Contrast check (cardinal #991B1E vs body text #333333): ~3.9:1 — passes 1.4.1.
  */
 
-.et_pb_text a,
-.et_pb_post_content a,
-.entry-content a,
-.post-content a {
+/*
+ * Exclude Divi button anchors — Divi renders buttons as <a class="et_pb_button">
+ * inside text modules. These are interactive controls, not inline links, and
+ * should not receive underline treatment. The :not() chain covers the Divi
+ * button class and the more_button variant used on blog/archive modules.
+ */
+.et_pb_text a:not(.et_pb_button):not(.et_pb_more_button),
+.et_pb_post_content a:not(.et_pb_button):not(.et_pb_more_button),
+.entry-content a:not(.et_pb_button):not(.et_pb_more_button),
+.post-content a:not(.et_pb_button):not(.et_pb_more_button) {
     text-decoration: none;
 }
 
-.et_pb_text a:hover,
-.et_pb_text a:focus,
-.et_pb_post_content a:hover,
-.et_pb_post_content a:focus,
-.entry-content a:hover,
-.entry-content a:focus,
-.post-content a:hover,
-.post-content a:focus {
+.et_pb_text a:not(.et_pb_button):not(.et_pb_more_button):hover,
+.et_pb_text a:not(.et_pb_button):not(.et_pb_more_button):focus,
+.et_pb_post_content a:not(.et_pb_button):not(.et_pb_more_button):hover,
+.et_pb_post_content a:not(.et_pb_button):not(.et_pb_more_button):focus,
+.entry-content a:not(.et_pb_button):not(.et_pb_more_button):hover,
+.entry-content a:not(.et_pb_button):not(.et_pb_more_button):focus,
+.post-content a:not(.et_pb_button):not(.et_pb_more_button):hover,
+.post-content a:not(.et_pb_button):not(.et_pb_more_button):focus {
     text-decoration: underline;
     /* Ensure focus is visible for keyboard users beyond the underline */
     outline-offset: 2px;
