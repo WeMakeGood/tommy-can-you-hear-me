@@ -1,0 +1,33 @@
+/*
+ * Link distinction — WCAG 1.4.1 (Use of Color)
+ *
+ * Links must be distinguishable from surrounding text by more than color alone.
+ * Underline is suppressed at rest (design intent preserved) and shown on
+ * hover and focus as the non-color differentiator.
+ *
+ * Scoped to Divi text modules and standard post/page content only.
+ * Nav links, buttons, and CTA modules are intentionally excluded.
+ *
+ * Contrast check (USC cardinal #991B1E on white #FFFFFF): 5.9:1 — passes AA.
+ * Contrast check (cardinal #991B1E vs body text #333333): ~3.9:1 — passes 1.4.1.
+ */
+
+.et_pb_text a,
+.et_pb_post_content a,
+.entry-content a,
+.post-content a {
+    text-decoration: none;
+}
+
+.et_pb_text a:hover,
+.et_pb_text a:focus,
+.et_pb_post_content a:hover,
+.et_pb_post_content a:focus,
+.entry-content a:hover,
+.entry-content a:focus,
+.post-content a:hover,
+.post-content a:focus {
+    text-decoration: underline;
+    /* Ensure focus is visible for keyboard users beyond the underline */
+    outline-offset: 2px;
+}

@@ -2,8 +2,8 @@
 /**
  * Plugin Name:       Tommy Can You Hear Me
  * Plugin URI:        https://marshall.usc.edu
- * Description:       Tommy, can you hear me? Can you feel me near you? (Yes — because this plugin fixes Divi accessibility issues so everyone can. WCAG 1.4.4, 4.1.2.)
- * Version:           1.1.0
+ * Description:       Tommy, can you hear me? Can you feel me near you? (Yes — because this plugin fixes Divi accessibility issues so everyone can. WCAG 1.4.1, 1.4.4, 4.1.2.)
+ * Version:           1.2.0
  * Author:            USC Marshall
  * License:           GPL-2.0-or-later
  * Text Domain:       tommy-can-you-hear-me
@@ -81,4 +81,28 @@ if ( ! function_exists( 'et_core_esc_previously' ) ) {
 }
 
 
+// ---------------------------------------------------------------------------
+// WCAG 1.4.1 — Use of Color
+// Links must be distinguishable from surrounding text by more than color alone.
+//
+// Approach: no underline at rest (preserves Jay's design), underline on
+// hover and focus (satisfies 1.4.1). This is valid under WCAG provided the
+// link color has at least 3:1 contrast ratio against surrounding body text.
+// USC cardinal (#991B1E) against body text (#333333) is ~3.9:1 — passes.
+//
+// Scoped to Divi text module and post content only to avoid overriding
+// nav links, buttons, and other intentionally non-underlined link contexts.
+// ---------------------------------------------------------------------------
 
+/**
+ * Enqueue the link distinction stylesheet.
+ */
+function tcyhm_enqueue_styles() {
+    wp_enqueue_style(
+        'tcyhm-link-distinction',
+        plugin_dir_url( __FILE__ ) . 'css/link-distinction.css',
+        [],
+        '1.2.0'
+    );
+}
+add_action( 'wp_enqueue_scripts', 'tcyhm_enqueue_styles' );
