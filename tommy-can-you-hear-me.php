@@ -3,7 +3,7 @@
  * Plugin Name:       Tommy Can You Hear Me
  * Plugin URI:        https://marshall.usc.edu
  * Description:       Tommy, can you hear me? Can you feel me near you? (Yes — because this plugin fixes Divi accessibility issues so everyone can. WCAG 1.4.1, 1.4.4, 4.1.2.)
- * Version:           1.2.1
+ * Version:           1.3.0
  * Author:            USC Marshall
  * License:           GPL-2.0-or-later
  * Text Domain:       tommy-can-you-hear-me
@@ -106,3 +106,110 @@ function tcyhm_enqueue_styles() {
     );
 }
 add_action( 'wp_enqueue_scripts', 'tcyhm_enqueue_styles' );
+
+
+// ---------------------------------------------------------------------------
+// WCAG 4.1.2 — Name, Role, Value (Divi image modules)
+// Divi renders image-wrapped links with no accessible name when the module's
+// alt attribute is empty and the attachment has no alt text in the media
+// library. This filter runs at render time and pulls the alt from
+// _wp_attachment_image_alt, giving every image-wrapped link a computable
+// accessible name without modifying post content.
+//
+// Modules covered:
+//   et_pb_image          — image module (src / alt)
+//   et_pb_fullwidth_image — full-width image module (src / alt)
+//   et_pb_blurb          — blurb module with image (image / alt)
+//   et_pb_slide          — slider slide (image / image_alt)
+//   et_pb_fullwidth_header — fullwidth header (logo_image_url / logo_alt_text,
+//                            header_image_url / image_alt_text)
+//   et_pb_menu           — menu module logo (logo / logo_alt)
+// ---------------------------------------------------------------------------
+
+/**
+ * Look up the alt text for an image from the WordPress media library.
+ * Falls back to the attachment title if alt meta is empty.
+ *
+ * @param string $image_url Absolute or root-relative URL of the image.
+ * @return string Alt text, or empty string if attachment cannot be found.
+ */
+function tcyhm_get_image_alt( $image_url ) {
+    if ( ! $image_url ) {
+        return '';
+    }
+
+    // Resolve root-relative URLs to absolute before lookup.
+    if ( '/' === $image_url[0] ) {
+        $image_url = home_url() . $image_url;
+    }
+
+    $post_id = attachment_url_to_postid( $image_url );
+    if ( ! $post_id ) {
+        return '';
+    }
+
+    $alt = get_post_meta( $post_id, '_wp_attachment_image_alt', true );
+    if ( '' === $alt ) {
+        $alt = get_the_title( $post_id );
+    }
+
+    return $alt;
+}
+
+/**
+ * Inject alt text into Divi module attributes at render time when the module's
+ * own alt field is empty. Only fires when there is genuinely no alt set —
+ * explicit empty strings set by an editor are treated as intentional and left
+ * alone (decorative image pattern).
+ *
+ * @param array  $attrs             Processed module attributes.
+ * @param array  $unprocessed_attrs Raw shortcode attributes before processing.
+ * @param string $slug              Module slug (e.g. 'et_pb_image').
+ * @return array Modified attributes.
+ */
+function tcyhm_divi_module_alt( $attrs, $unprocessed_attrs, $slug ) {
+    switch ( $slug ) {
+
+        case 'et_pb_image':
+        case 'et_pb_fullwidth_image':
+            if ( isset( $attrs['src'] ) && ! isset( $unprocessed_attrs['alt'] ) ) {
+                $attrs['alt'] = tcyhm_get_image_alt( $attrs['src'] );
+            }
+            break;
+
+        case 'et_pb_blurb':
+            // Only applies to image blurbs (use_icon='off' or unset).
+            if (
+                isset( $attrs['image'] ) &&
+                ( ! isset( $attrs['use_icon'] ) || 'off' === $attrs['use_icon'] ) &&
+                ! isset( $unprocessed_attrs['alt'] )
+            ) {
+                $attrs['alt'] = tcyhm_get_image_alt( $attrs['image'] );
+            }
+            break;
+
+        case 'et_pb_slide':
+            if ( ! empty( $attrs['image'] ) && ! isset( $unprocessed_attrs['image_alt'] ) ) {
+                $attrs['image_alt'] = tcyhm_get_image_alt( $attrs['image'] );
+            }
+            break;
+
+        case 'et_pb_fullwidth_header':
+            if ( ! empty( $attrs['logo_image_url'] ) && ! isset( $unprocessed_attrs['logo_alt_text'] ) ) {
+                $attrs['logo_alt_text'] = tcyhm_get_image_alt( $attrs['logo_image_url'] );
+            }
+            if ( ! empty( $attrs['header_image_url'] ) && ! isset( $unprocessed_attrs['image_alt_text'] ) ) {
+                $attrs['image_alt_text'] = tcyhm_get_image_alt( $attrs['header_image_url'] );
+            }
+            break;
+
+        case 'et_pb_menu':
+            if ( ! empty( $attrs['logo'] ) && ! isset( $unprocessed_attrs['logo_alt'] ) ) {
+                $attrs['logo_alt'] = tcyhm_get_image_alt( $attrs['logo'] );
+            }
+            break;
+    }
+
+    return $attrs;
+}
+add_filter( 'et_pb_module_shortcode_attributes', 'tcyhm_divi_module_alt', 20, 3 );
