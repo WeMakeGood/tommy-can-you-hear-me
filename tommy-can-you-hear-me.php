@@ -3,7 +3,7 @@
  * Plugin Name:       Tommy Can You Hear Me
  * Plugin URI:        https://marshall.usc.edu
  * Description:       Tommy, can you hear me? Can you feel me near you? (Yes — because this plugin fixes Divi accessibility issues so everyone can. WCAG 1.4.1, 1.4.4, 4.1.2.)
- * Version:           1.4.0
+ * Version:           1.5.0
  * Author:            USC Marshall
  * License:           GPL-2.0-or-later
  * Text Domain:       tommy-can-you-hear-me
@@ -217,41 +217,115 @@ add_filter( 'et_pb_module_shortcode_attributes', 'tcyhm_divi_module_alt', 20, 3 
 
 // ---------------------------------------------------------------------------
 // WCAG 4.1.2 — Name, Role, Value (client-side rendered Divi elements)
-// Divi renders slider navigation arrows and video play buttons via JavaScript
-// after page load. These elements have no accessible name and cannot be fixed
-// via PHP filters. A lightweight inline script patches them once the DOM is
-// ready — adding aria-label to each element type.
+// Divi renders many interactive elements via JavaScript after page load.
+// These elements have no accessible name and cannot be fixed via PHP filters.
+//
+// A MutationObserver watches the DOM for new nodes and labels them as they
+// appear. This is necessary because DOMContentLoaded fires before Divi's JS
+// creates sliders, carousels, and other dynamic UI.
 //
 // Elements covered:
-//   .et-pb-arrow-prev  — slider previous arrow (aria-label="Previous slide")
-//   .et-pb-arrow-next  — slider next arrow     (aria-label="Next slide")
-//   .et_pb_video_play  — video play button      (aria-label="Play video")
+//   .et-pb-arrow-prev         — slider previous arrow
+//   .et-pb-arrow-next         — slider next arrow
+//   .et_pb_video_play         — video play button
+//   .dica-image-container a   — DICA carousel image links (name from bio URL)
+//   .dssb-sharing-button-*    — Divi Social Sharing Buttons plugin
 // ---------------------------------------------------------------------------
 
 /**
  * Output an inline script in the footer that labels Divi's client-side
- * rendered interactive elements once the DOM is ready.
+ * rendered interactive elements using a MutationObserver.
  */
 function tcyhm_label_dynamic_elements() {
     ?>
     <script>
     (function () {
-        function labelDiviElements() {
-            document.querySelectorAll('.et-pb-arrow-prev:not([aria-label])').forEach(function (el) {
+        /**
+         * Label a single element if it matches one of our selectors and
+         * doesn't already have an aria-label.
+         */
+        function labelElement(el) {
+            if (el.nodeType !== 1) return;
+            if (el.getAttribute('aria-label')) return;
+
+            var cls = el.className || '';
+
+            // Slider arrows — Divi renders as <a href="#"> with hidden <span>
+            if (el.classList.contains('et-pb-arrow-prev')) {
                 el.setAttribute('aria-label', 'Previous slide');
-            });
-            document.querySelectorAll('.et-pb-arrow-next:not([aria-label])').forEach(function (el) {
+                return;
+            }
+            if (el.classList.contains('et-pb-arrow-next')) {
                 el.setAttribute('aria-label', 'Next slide');
-            });
-            document.querySelectorAll('.et_pb_video_play:not([aria-label])').forEach(function (el) {
+                return;
+            }
+
+            // Video play button
+            if (el.classList.contains('et_pb_video_play')) {
                 el.setAttribute('aria-label', 'Play video');
-            });
+                return;
+            }
+
+            // DICA carousel image links — extract person name from bio URL slug
+            if (el.tagName === 'A' && el.classList.contains('image') &&
+                el.closest('.dica-image-container')) {
+                var href = el.getAttribute('href') || '';
+                var match = href.match(/\/bio\/([^/]+)/);
+                if (match) {
+                    var name = match[1].replace(/-\d+$/, '').replace(/-/g, ' ')
+                        .replace(/\b\w/g, function (c) { return c.toUpperCase(); })
+                        .replace(/\bIii\b/, 'III').replace(/\bIi\b/, 'II')
+                        .replace(/\bJr\b/, 'Jr.').replace(/\bSr\b/, 'Sr.');
+                    el.setAttribute('aria-label', name);
+                }
+                return;
+            }
+
+            // Divi Social Sharing Buttons — class tells us the network
+            if (typeof cls === 'string' && cls.indexOf('dssb-sharing-button-') !== -1) {
+                var networkMatch = cls.match(/dssb-sharing-button-(\w+)/);
+                if (networkMatch) {
+                    var network = networkMatch[1];
+                    var label = 'Share on ' + network.charAt(0).toUpperCase() + network.slice(1);
+                    el.setAttribute('aria-label', label);
+                }
+                return;
+            }
         }
 
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', labelDiviElements);
+        /**
+         * Scan a root node and all its descendants for elements to label.
+         */
+        function labelTree(root) {
+            if (root.nodeType !== 1) return;
+            labelElement(root);
+            root.querySelectorAll(
+                '.et-pb-arrow-prev, .et-pb-arrow-next, .et_pb_video_play, ' +
+                '.dica-image-container a.image, a[class*="dssb-sharing-button-"]'
+            ).forEach(labelElement);
+        }
+
+        // Label anything already in the DOM
+        labelTree(document.body || document.documentElement);
+
+        // Watch for Divi's JS-rendered elements
+        var observer = new MutationObserver(function (mutations) {
+            for (var i = 0; i < mutations.length; i++) {
+                var added = mutations[i].addedNodes;
+                for (var j = 0; j < added.length; j++) {
+                    labelTree(added[j]);
+                }
+            }
+        });
+
+        function startObserver() {
+            observer.observe(document.body, { childList: true, subtree: true });
+        }
+
+        if (document.body) {
+            startObserver();
         } else {
-            labelDiviElements();
+            document.addEventListener('DOMContentLoaded', startObserver);
         }
     }());
     </script>
