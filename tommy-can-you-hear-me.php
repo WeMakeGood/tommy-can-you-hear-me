@@ -3,7 +3,7 @@
  * Plugin Name:       Tommy Can You Hear Me
  * Plugin URI:        https://marshall.usc.edu
  * Description:       Tommy, can you hear me? Can you feel me near you? (Yes — because this plugin fixes Divi accessibility issues so everyone can. WCAG 1.4.1, 1.4.4, 4.1.2.)
- * Version:           1.3.0
+ * Version:           1.4.0
  * Author:            USC Marshall
  * License:           GPL-2.0-or-later
  * Text Domain:       tommy-can-you-hear-me
@@ -213,3 +213,48 @@ function tcyhm_divi_module_alt( $attrs, $unprocessed_attrs, $slug ) {
     return $attrs;
 }
 add_filter( 'et_pb_module_shortcode_attributes', 'tcyhm_divi_module_alt', 20, 3 );
+
+
+// ---------------------------------------------------------------------------
+// WCAG 4.1.2 — Name, Role, Value (client-side rendered Divi elements)
+// Divi renders slider navigation arrows and video play buttons via JavaScript
+// after page load. These elements have no accessible name and cannot be fixed
+// via PHP filters. A lightweight inline script patches them once the DOM is
+// ready — adding aria-label to each element type.
+//
+// Elements covered:
+//   .et-pb-arrow-prev  — slider previous arrow (aria-label="Previous slide")
+//   .et-pb-arrow-next  — slider next arrow     (aria-label="Next slide")
+//   .et_pb_video_play  — video play button      (aria-label="Play video")
+// ---------------------------------------------------------------------------
+
+/**
+ * Output an inline script in the footer that labels Divi's client-side
+ * rendered interactive elements once the DOM is ready.
+ */
+function tcyhm_label_dynamic_elements() {
+    ?>
+    <script>
+    (function () {
+        function labelDiviElements() {
+            document.querySelectorAll('.et-pb-arrow-prev:not([aria-label])').forEach(function (el) {
+                el.setAttribute('aria-label', 'Previous slide');
+            });
+            document.querySelectorAll('.et-pb-arrow-next:not([aria-label])').forEach(function (el) {
+                el.setAttribute('aria-label', 'Next slide');
+            });
+            document.querySelectorAll('.et_pb_video_play:not([aria-label])').forEach(function (el) {
+                el.setAttribute('aria-label', 'Play video');
+            });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', labelDiviElements);
+        } else {
+            labelDiviElements();
+        }
+    }());
+    </script>
+    <?php
+}
+add_action( 'wp_footer', 'tcyhm_label_dynamic_elements' );
