@@ -3,7 +3,7 @@
  * Plugin Name:       Tommy Can You Hear Me
  * Plugin URI:        https://marshall.usc.edu
  * Description:       Tommy, can you hear me? Can you feel me near you? (Yes — because this plugin fixes Divi accessibility issues so everyone can. WCAG 1.4.1, 1.4.4, 4.1.2.)
- * Version:           1.5.0
+ * Version:           1.6.0
  * Author:            USC Marshall
  * License:           GPL-2.0-or-later
  * Text Domain:       tommy-can-you-hear-me
@@ -230,6 +230,7 @@ add_filter( 'et_pb_module_shortcode_attributes', 'tcyhm_divi_module_alt', 20, 3 
 //   .et_pb_video_play         — video play button
 //   .dica-image-container a   — DICA carousel image links (name from bio URL)
 //   .dssb-sharing-button-*    — Divi Social Sharing Buttons plugin
+//   select.sf-input-select    — Search & Filter Pro faceted search dropdowns
 // ---------------------------------------------------------------------------
 
 /**
@@ -291,6 +292,18 @@ function tcyhm_label_dynamic_elements() {
                 }
                 return;
             }
+
+            // Search & Filter Pro — selects have name like _sft_kind[], _sft_category[]
+            if (el.tagName === 'SELECT' && el.classList.contains('sf-input-select')) {
+                var sfName = el.getAttribute('name') || '';
+                var sfMatch = sfName.match(/^_sft_(\w+)/);
+                if (sfMatch) {
+                    var taxonomy = sfMatch[1].replace(/_/g, ' ')
+                        .replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+                    el.setAttribute('aria-label', 'Filter by ' + taxonomy);
+                }
+                return;
+            }
         }
 
         /**
@@ -301,7 +314,8 @@ function tcyhm_label_dynamic_elements() {
             labelElement(root);
             root.querySelectorAll(
                 '.et-pb-arrow-prev, .et-pb-arrow-next, .et_pb_video_play, ' +
-                '.dica-image-container a.image, a[class*="dssb-sharing-button-"]'
+                '.dica-image-container a.image, a[class*="dssb-sharing-button-"], ' +
+                'select.sf-input-select'
             ).forEach(labelElement);
         }
 
